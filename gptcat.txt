@@ -1,0 +1,657 @@
+Run the backend and hit the Phase 1 APIs in order.
+First, make sure MySQL is running and the database exists:
+CREATE DATABASE wealth_advisor;
+Then start the app from backend:
+.\mvnw.cmd spring-boot:run
+Use this checklist.
+1.
+Register
+curl -X POST http://localhost:8081/auth/register ^
+  -H "Content-Type: application/json" ^
+  -d "{\"fullName\":\"Nishant Kumar\",\"email\":\"nishant@example.com\",\"password\":\"Pass1234\"}"
+2.
+Login
+curl -X POST http://localhost:8081/auth/login ^
+  -H "Content-Type: application/json" ^
+  -d "{\"email\":\"nishant@example.com\",\"password\":\"Pass1234\"}"
+Copy accessToken and refreshToken.
+3.
+Save profile
+curl -X PUT http://localhost:8081/profile ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"monthlyIncome":80000,\"monthlyExpenses":35000,\"assetsValue":1200000,\"liabilitiesValue":200000,\"age\":26,\"dependents\":2,\"employmentType\":\"SALARIED\",\"investmentExperienceYears\":3,\"investmentKnowledge\":\"INTERMEDIATE\"}"
+4.
+Get profile
+curl http://localhost:8081/profile ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+5.
+Calculate risk
+curl -X POST http://localhost:8081/risk/calculate ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"investmentHorizonYears\":12,\"lossTolerance\":7,\"incomeStability\":8,\"investmentExperienceYears\":3}"
+6.
+Check latest risk and history
+curl http://localhost:8081/risk/latest ^
+-H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+curl http://localhost:8081/risk/history ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+7.
+Refresh token
+curl -X POST http://localhost:8081/auth/refresh ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_REFRESH_TOKEN\"}"
+8.
+Logout
+curl -X POST http://localhost:8081/auth/logout ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_REFRESH_TOKEN\"}"
+What to verify:
+•
+register creates a user
+•
+login returns both tokens
+•
+/profile fails without JWT and works with JWT
+•
+profile response shows savingsRate and netWorth
+•
+/risk/calculate stores a score and category
+•
+/risk/history returns previous calculations
+•
+refresh gives new tokens
+•
+old refresh token should stop working after logout
+Database check in MySQL:
+•
+users
+•
+user_profiles
+•
+risk_profiles
+•
+refresh_tokens
+If you want, I can also add a Postman collection or Swagger/OpenAPI next so you can test everything faster.
+Use this exact flow.
+Start backend:
+.\mvnw.cmd spring-boot:run
+If it stays running on 8081, test in this order.
+1. Register
+curl -X POST http://localhost:8081/auth/register ^
+  -H "Content-Type: application/json" ^
+  -d "{\"fullName\":\"Test User\",\"email\":\"testuser@example.com\",\"password\":\"Pass1234\"}"
+Expected:
+•
+HTTP 200
+•
+response contains accessToken
+•
+response contains refreshToken
+•
+response contains email
+2. Login
+curl -X POST http://localhost:8081/auth/login ^
+  -H "Content-Type: application/json" ^
+  -d "{\"email\":\"testuser@example.com\",\"password\":\"Pass1234\"}"
+  Expected:
+•
+HTTP 200
+•
+new accessToken and refreshToken
+Save the returned accessToken.
+3. Check auth protection Without token:
+curl http://localhost:8081/profile
+Expected:
+•
+401 or 403
+With token:
+curl http://localhost:8081/profile ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Expected:
+•
+profile response or “profile not found” style app response if user has no saved data yet
+4. Save profile
+curl -X PUT http://localhost:8081/profile ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"monthlyIncome\":80000,\"monthlyExpenses\":35000,\"assetsValue\":1000000,\"liabilitiesValue\":200000,\"age\":25,\"dependents\":1,\"employmentType\":\"SALARIED\",\"investmentExperienceYears\":3,\"investmentKnowledge\":\"INTERMEDIATE\"}"
+Expected:
+•
+HTTP 200
+•
+returned savingsRate
+•
+returned netWorth
+•
+netWorth should be 800000
+5. Fetch profile again
+curl http://localhost:8081/profile ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Expected:
+•
+same saved data comes back
+6. Calculate risk score
+curl -X POST http://localhost:8081/risk/calculate ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"investmentHorizonYears\":10,\"lossTolerance\":7,\"incomeStability\":8,\"investmentExperienceYears\":3}"
+Expected:
+•
+HTTP 200
+•
+riskScore
+•
+riskCategory
+•
+component scores like ageScore, incomeScore, horizonScore
+7. Get latest risk
+curl http://localhost:8081/risk/latest ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Expected:
+•
+latest stored risk result
+8. Get risk history Run risk calculation 2-3 times with different values, then:
+curl http://localhost:8081/risk/history ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Expected:
+•
+list of previous calculations
+9. Refresh token
+curl -X POST http://localhost:8081/auth/refresh ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_REFRESH_TOKEN\"}"
+Expected:
+•
+new access token
+•
+new refresh token
+10. Logout
+curl -X POST http://localhost:8081/auth/logout ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_REFRESH_TOKEN\"}"
+  Expected:
+•
+success response
+Then try refresh again with the old refresh token:
+curl -X POST http://localhost:8081/auth/refresh ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_OLD_REFRESH_TOKEN\"}"
+Expected:
+•
+unauthorized / invalid token response
+11. Verify DB Check these MySQL tables:
+•
+users
+•
+user_profiles
+•
+risk_profiles
+•
+refresh_tokens
+Quick SQL:
+USE wealth_advisor;
+SELECT * FROM users;
+SELECT * FROM user_profiles;
+SELECT * FROM risk_profiles;
+SELECT * FROM refresh_tokens;
+Good. That means these parts are already working correctly:
+•
+register works
+•
+login works
+•
+protected endpoint /profile is blocked without token
+Now test with the token.
+Take the accessToken from login and run this in cmd:
+curl http://localhost:8081/profile ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Replace YOUR_ACCESS_TOKEN with the actual token.
+Then save profile:
+curl -X PUT http://localhost:8081/profile ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"monthlyIncome\":80000,\"monthlyExpenses\":35000,\"assetsValue\":1000000,\"liabilitiesValue\":200000,\"age\":25,\"dependents\":1,\"employmentType\":\"SALARIED\",\"investmentExperienceYears\":3,\"investmentKnowledge\":\"INTERMEDIATE\"}"
+Then fetch it again:
+curl http://localhost:8081/profile ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+After that, test risk calculation:
+curl -X POST http://localhost:8081/risk/calculate ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"investmentHorizonYears\":10,\"lossTolerance\":7,\"incomeStability\":8,\"investmentExperienceYears\":3}"
+Then:
+curl http://localhost:8081/risk/latest ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+curl http://localhost:8081/risk/history ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+What you should expect next:
+•
+/profile with token should return data, not 403
+•
+PUT /profile should save successfully
+•
+/risk/calculate should return a score and category
+•
+/risk/history should show saved risk records
+If you want, paste the next command output here and I’ll verify each step with you.
+This is working properly.
+What you have already verified:
+•
+POST /auth/register works
+•
+POST /auth/login works
+•
+/profile is protected without token
+•
+PUT /profile saves data correctly
+•
+GET /profile returns saved data correctly
+•
+POST /risk/calculate works and persists a score
+Your returned values are internally consistent:
+•
+savingsRate = (80000 - 35000) / 80000 * 100 = 56.25
+•
+netWorth = 1000000 - 200000 = 800000
+•
+riskScore = 70
+•
+riskCategory = AGGRESSIVE
+The curl: (3) URL rejected: Malformed input to a URL function after profile save is not a backend problem. That happened because of an extra blank/formatting issue in the multiline curl command in cmd. The API itself succeeded.
+Now finish the final checks.
+Run latest risk:
+curl http://localhost:8081/risk/latest ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Run history:
+curl http://localhost:8081/risk/history ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Then test refresh:
+curl -X POST http://localhost:8081/auth/refresh ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_REFRESH_TOKEN\"}"
+Then logout:
+curl -X POST http://localhost:8081/auth/logout ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_REFRESH_TOKEN\"}"
+Then try refresh again with the same old refresh token. It should fail.
+If those pass, Phase 1 is confirmed working end to end.
+One more thing: your current access token will expire based on app.jwt.expiration. So use the newest token from login/refresh when testing later steps.
+If you want, send me the outputs of:
+•
+/risk/latest
+•
+/risk/history
+•
+/auth/refresh
+•
+/auth/logout
+and I’ll validate the last part too.
+These results are correct. That confirms:
+•
+GET /risk/latest works
+•
+GET /risk/history works
+•
+risk calculation is being stored in DB and fetched properly
+At this point, Phase 1 core is functioning:
+•
+auth
+•
+protected routes
+•
+profile CRUD
+•
+risk scoring
+•
+risk persistence/history
+Now only verify refresh/logout to complete the auth cycle.
+Run refresh with the refreshToken you got from login:
+curl -X POST http://localhost:8081/auth/refresh ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_REFRESH_TOKEN\"}"
+Expected:
+•
+success response
+•
+new accessToken
+•
+new refreshToken
+Then logout using that refresh token:
+curl -X POST http://localhost:8081/auth/logout ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_REFRESH_TOKEN\"}"
+  Then try refresh again using the same old token:
+curl -X POST http://localhost:8081/auth/refresh ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"YOUR_REFRESH_TOKEN\"}"
+Expected:
+•
+it should fail as invalid/revoked
+If that works too, then Phase 1 is verified end to end.
+One note: your backend currently returns 403 Forbidden for unauthenticated protected endpoints, where many APIs return 401 Unauthorized. It’s acceptable for now, but if you want cleaner API behavior, I can fix that next.
+That confirms the auth lifecycle is working correctly.
+You have now verified:
+•
+register
+•
+login
+•
+protected route blocking
+•
+profile save/fetch
+•
+risk calculate
+•
+risk latest/history
+•
+refresh token rotation
+•
+logout
+Final check: try refreshing again with the token you just logged out with:
+curl -X POST http://localhost:8081/auth/refresh ^
+  -H "Content-Type: application/json" ^
+  -d "{\"refreshToken\":\"eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0dXNlckBleGFtcGxlLmNvbSIsImlhdCI6MTc3NTg4OTk5NSwiZXhwIjoxNzc2NDk0Nzk1fQ.-Y_Sl9KEt8m0MNMTyvAlP2q4AjqRnbAEoMmK5QViO6sXQowAOBIKOoiJ48DcdisL\"}"
+Expected:
+•
+failure
+•
+invalid / revoked / unauthorized style response
+If that fails as expected, then Phase 1 is verified end to end.
+Current conclusion:
+•
+your backend is working properly for Phase 1 core features
+Recommended next fixes before Phase 2:
+•
+return 401 instead of 403 for missing/invalid auth
+•
+move secrets/passwords out of application.properties into env vars
+•
+add Swagger/OpenAPI so testing is easier
+•
+add real service tests for auth/profile/risk
+If you want, I can do those cleanup steps next, or start Phase 2 goals implementation.
+Phase 1 is verified end to end.
+That last response is exactly what should happen after logout:
+•
+revoked refresh token cannot be reused
+•
+token rotation is working properly
+So your backend is currently working for:
+•
+POST /auth/register
+•
+POST /auth/login
+•
+POST /auth/refresh
+•
+POST /auth/logout
+•
+GET /profile
+•
+PUT /profile
+•
+POST /risk/calculate
+•
+GET /risk/latest
+•
+GET /risk/history
+What this means technically:
+•
+MySQL persistence is working
+•
+JWT auth is working
+•
+protected endpoints are working
+•
+profile calculation logic is working
+•
+risk scoring persistence/history is working
+•
+refresh token revocation is working
+Next best move:
+1.
+Clean up auth behavior and config
+◦
+use 401 for unauthorized
+◦
+move DB/JWT secrets to env vars
+◦
+add Swagger
+2.
+Start Phase 2
+◦
+goal CRUD
+◦
+SIP calculator
+◦
+inflation-adjusted goals
+
+goal progress tracking
+The right next step is Phase 2. If you want, I’ll start implementing goals now.
+Phase 2 goal planning core is implemented and .\mvnw.cmd test passes.
+What’s now added:
+•
+secured goal CRUD in GoalController.java
+•
+goal persistence in GoalRepository.java
+•
+goal planning logic in GoalPlanningService.java
+•
+request/response models in GoalRequest.java and GoalResponse.java
+•
+goal entity now stores expectedAnnualReturn and expectedInflationRate in Goal.java
+What the goal engine does now:
+•
+creates, updates, fetches, lists, and deletes goals
+•
+calculates inflation-adjusted target
+•
+calculates required monthly SIP using expected return and current amount
+•
+returns progress percent
+•
+returns trackingStatus based on monthly surplus from the saved profile:
+◦
+ON_TRACK
+◦
+STRETCH
+◦
+AT_RISK
+◦
+PROFILE_REQUIRED
+◦
+ACHIEVED
+Available endpoints:
+•
+GET /goals
+•
+GET /goals/{goalId}
+•
+POST /goals
+•
+PUT /goals/{goalId}
+•
+DELETE /goals/{goalId}
+Example test command:
+curl -X POST http://localhost:8081/goals ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"name\":\"Retirement Fund\",\"goalType\":\"RETIREMENT\",\"targetAmount\":2000000,\"currentAmount\":250000,\"targetYears\":10,\"priority\":1,\"expectedAnnualReturn\":12,\"expectedInflationRate\":6}"
+If you want, the next step is to verify these goal APIs together and then move to the next Phase 2 block: portfolio optimization.
+Use your existing logged-in user and accessToken.
+Test goals in this order.
+1. Create a goal
+curl -X POST http://localhost:8081/goals ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"name\":\"Retirement Fund\",\"goalType\":\"RETIREMENT\",\"targetAmount\":2000000,\"currentAmount\":250000,\"targetYears\":10,\"priority\":1,\"expectedAnnualReturn\":12,\"expectedInflationRate\":6}"
+Expected:
+•
+success response
+•
+inflationAdjustedTarget should be greater than targetAmount
+•
+requiredMonthlyInvestment should be present
+•
+progressPercent should be present
+•
+trackingStatus should be something like ON_TRACK, STRETCH, or AT_RISK
+2. List all goals
+curl http://localhost:8081/goals ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Expected:
+•
+array with the goal you just created
+3. Fetch one goal Replace 1 with the returned goal id if needed:
+curl http://localhost:8081/goals/1 ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+  Expected:
+•
+same goal details
+•
+same calculated fields
+4. Update the goal
+curl -X PUT http://localhost:8081/goals/1 ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"name\":\"Retirement Corpus\",\"goalType\":\"RETIREMENT\",\"targetAmount\":2500000,\"currentAmount\":300000,\"targetYears\":12,\"priority\":1,\"expectedAnnualReturn\":11,\"expectedInflationRate\":6,\"status\":\"IN_PROGRESS\"}"
+Expected:
+•
+updated name and amounts
+•
+recalculated inflationAdjustedTarget
+•
+recalculated requiredMonthlyInvestment
+•
+updated progressPercent
+5. Create a second goal
+curl -X POST http://localhost:8081/goals ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" ^
+  -d "{\"name\":\"Emergency Fund\",\"goalType\":\"EMERGENCY_FUND\",\"targetAmount\":500000,\"currentAmount\":150000,\"targetYears\":2,\"priority\":2,\"expectedAnnualReturn\":7,\"expectedInflationRate\":4}"
+Expected:
+•
+second goal created
+•
+GET /goals should now show 2 goals ordered by priority
+6. Delete one goal
+curl -X DELETE http://localhost:8081/goals/2 ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Expected:
+•
+success response
+Then verify:
+curl http://localhost:8081/goals ^
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+Expected:
+•
+deleted goal no longer appears
+7. Security check Without token:
+curl http://localhost:8081/goals
+Expected:
+•
+403 or unauthorized-style block
+8. Cross-check calculations For a valid response, check:
+•
+inflationAdjustedTarget > targetAmount
+•
+progressPercent = currentAmount / inflationAdjustedTarget * 100 approximately
+•
+requiredMonthlyInvestment should decrease if:
+◦
+currentAmount increases
+◦
+targetYears increases
+•
+requiredMonthlyInvestment should increase if:
+
+targetAmount increases
+◦
+inflationRate increases
+9. DB verification In MySQL:
+USE wealth_advisor;
+SELECT id, user_id, name, goal_type, target_amount, current_amount, target_years, expected_annual_return, expected_inflation_rate, inflation_adjusted_target, required_monthly_investment, status, priority FROM goals;
+Expected:
+•
+saved rows match API output
+If all of these pass, your Phase 2 goal engine is working properly.
+If you want, paste the output of POST /goals and I’ll verify the calculations too.
+
+C:\Users\DELL>curl -X POST http://localhost:8081/auth/login ^
+More?   -H "Content-Type: application/json" ^
+More?   -d "{\"email\":\"testuser@example.com\",\"password\":\"Pass1234\"}"
+{"success":true,"message":"Login successful","data":{"userId":1,"fullName":"Test User","email":"testuser@example.com","role":"USER","accessToken":"eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc","refreshToken":"eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0dXNlckBleGFtcGxlLmNvbSIsImlhdCI6MTc3NjA3MzkyNSwiZXhwIjoxNzc2Njc4NzI1fQ.Cn52WclCiH4CB1WeDJzGJsIRA84_oB6UVWLDFrdKCvMlbWTQRQzh0R5iVUgfE7NF"}}
+C:\Users\DELL>curl http://localhost:8081/portfolio ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":false,"message":"could not execute statement [Connection is read-only. Queries leading to data modification are not allowed] [insert into portfolios (debt_pct,equity_pct,gold_pct,last_rebalanced,liquid_pct,total_current_value,total_invested_value,user_id) values (?,?,?,?,?,?,?,?)]","data":null}
+C:\Users\DELL>curl http://localhost:8081/portfolio/optimize ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":false,"message":"could not execute statement [Connection is read-only. Queries leading to data modification are not allowed] [insert into portfolios (debt_pct,equity_pct,gold_pct,last_rebalanced,liquid_pct,total_current_value,total_invested_value,user_id) values (?,?,?,?,?,?,?,?)]","data":null}
+C:\Users\DELL>curl http://localhost:8081/portfolio ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Portfolio fetched successfully","data":{"portfolioId":1,"userId":1,"totalInvestedValue":0.00,"totalCurrentValue":0.00,"totalProfitLoss":0.00,"totalReturnPercent":0.0,"equityPct":0.0,"debtPct":0.0,"goldPct":0.0,"liquidPct":0.0,"holdingsCount":0,"investments":[]}}
+C:\Users\DELL>curl http://localhost:8081/portfolio/optimize ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Portfolio optimization fetched successfully","data":{"portfolioId":1,"riskCategory":"AGGRESSIVE","allocationProfile":"AGGRESSIVE","expectedAnnualReturn":12.0,"estimatedVolatility":12.5,"totalCurrentValue":0.00,"allocationBuckets":[{"assetClass":"EQUITY","currentPct":0.0,"targetPct":75.0,"currentValue":0.00,"targetValue":0.00,"driftAmount":0.00,"action":"HOLD"},{"assetClass":"DEBT","currentPct":0.0,"targetPct":10.0,"currentValue":0.00,"targetValue":0.00,"driftAmount":0.00,"action":"HOLD"},{"assetClass":"GOLD","currentPct":0.0,"targetPct":10.0,"currentValue":0.00,"targetValue":0.00,"driftAmount":0.00,"action":"HOLD"},{"assetClass":"LIQUID","currentPct":0.0,"targetPct":5.0,"currentValue":0.00,"targetValue":0.00,"driftAmount":0.00,"action":"HOLD"}],"subAssetRecommendations":["Tilt equity toward large-cap and flexi-cap funds","Add controlled mid-cap exposure for growth","Keep limited debt and liquid allocation for opportunistic rebalancing"],"efficientFrontier":[{"profileName":"CONSERVATIVE","expectedReturn":7.2,"volatility":5.5,"equityPct":20.0,"debtPct":55.0,"goldPct":15.0,"liquidPct":10.0,"currentProfile":false},{"profileName":"BALANCED","expectedReturn":8.8,"volatility":7.4,"equityPct":40.0,"debtPct":35.0,"goldPct":15.0,"liquidPct":10.0,"currentProfile":false},{"profileName":"MODERATE_GROWTH","expectedReturn":10.1,"volatility":9.1,"equityPct":55.0,"debtPct":25.0,"goldPct":10.0,"liquidPct":10.0,"currentProfile":false},{"profileName":"GROWTH","expectedReturn":11.4,"volatility":11.3,"equityPct":70.0,"debtPct":15.0,"goldPct":10.0,"liquidPct":5.0,"currentProfile":false},{"profileName":"AGGRESSIVE","expectedReturn":12.2,"volatility":13.0,"equityPct":80.0,"debtPct":10.0,"goldPct":5.0,"liquidPct":5.0,"currentProfile":true}],"taxReviewFlags":[]}}
+C:\Users\DELL>curl -X POST http://localhost:8081/portfolio/investments ^
+More?   -H "Content-Type: application/json" ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc" ^
+More? -d "{\"assetName\":\"Nifty 50 ETF\",\"assetType\":\"ETF\",\"buyPrice\":220.50,\"quantity\":100,\"currentValue\":25000,\"purchaseDate\":\"2025-01-10\"}"
+{"success":true,"message":"Investment added successfully","data":{"portfolioId":1,"userId":1,"totalInvestedValue":22050.00,"totalCurrentValue":25000.00,"totalProfitLoss":2950.00,"totalReturnPercent":13.38,"equityPct":100.0,"debtPct":0.0,"goldPct":0.0,"liquidPct":0.0,"holdingsCount":1,"investments":[{"id":1,"assetName":"Nifty 50 ETF","assetType":"ETF","buyPrice":220.50,"quantity":100.0,"investedValue":22050.00,"currentValue":25000.00,"profitLoss":2950.00,"returnPercent":13.38,"purchaseDate":"2025-01-10"}]}}
+C:\Users\DELL>curl -X POST http://localhost:8081/portfolio/investments ^
+More?   -H "Content-Type: application/json" ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc" ^
+More? -d "{\"assetName\":\"Gold ETF\",\"assetType\":\"GOLD\",\"buyPrice\":55.00,\"quantity\":200,\"currentValue\":13000,\"purchaseDate\":\"2025-03-01\"}"
+{"success":true,"message":"Investment added successfully","data":{"portfolioId":1,"userId":1,"totalInvestedValue":33050.00,"totalCurrentValue":38000.00,"totalProfitLoss":4950.00,"totalReturnPercent":14.98,"equityPct":65.79,"debtPct":0.0,"goldPct":34.21,"liquidPct":0.0,"holdingsCount":2,"investments":[{"id":2,"assetName":"Gold ETF","assetType":"GOLD","buyPrice":55.00,"quantity":200.0,"investedValue":11000.00,"currentValue":13000.00,"profitLoss":2000.00,"returnPercent":18.18,"purchaseDate":"2025-03-01"},{"id":1,"assetName":"Nifty 50 ETF","assetType":"ETF","buyPrice":220.50,"quantity":100.0,"investedValue":22050.00,"currentValue":25000.00,"profitLoss":2950.00,"returnPercent":13.38,"purchaseDate":"2025-01-10"}]}}
+C:\Users\DELL>curl http://localhost:8081/portfolio ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Portfolio fetched successfully","data":{"portfolioId":1,"userId":1,"totalInvestedValue":33050.00,"totalCurrentValue":38000.00,"totalProfitLoss":4950.00,"totalReturnPercent":14.98,"equityPct":65.79,"debtPct":0.0,"goldPct":34.21,"liquidPct":0.0,"holdingsCount":2,"investments":[{"id":2,"assetName":"Gold ETF","assetType":"GOLD","buyPrice":55.00,"quantity":200.0,"investedValue":11000.00,"currentValue":13000.00,"profitLoss":2000.00,"returnPercent":18.18,"purchaseDate":"2025-03-01"},{"id":1,"assetName":"Nifty 50 ETF","assetType":"ETF","buyPrice":220.50,"quantity":100.0,"investedValue":22050.00,"currentValue":25000.00,"profitLoss":2950.00,"returnPercent":13.38,"purchaseDate":"2025-01-10"}]}}
+C:\Users\DELL>curl http://localhost:8081/portfolio/optimize ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Portfolio optimization fetched successfully","data":{"portfolioId":1,"riskCategory":"AGGRESSIVE","allocationProfile":"AGGRESSIVE","expectedAnnualReturn":12.0,"estimatedVolatility":12.5,"totalCurrentValue":38000.00,"allocationBuckets":[{"assetClass":"EQUITY","currentPct":65.79,"targetPct":75.0,"currentValue":25000.20,"targetValue":28500.00,"driftAmount":3499.80,"action":"BUY"},{"assetClass":"DEBT","currentPct":0.0,"targetPct":10.0,"currentValue":0.00,"targetValue":3800.00,"driftAmount":3800.00,"action":"BUY"},{"assetClass":"GOLD","currentPct":34.21,"targetPct":10.0,"currentValue":12999.80,"targetValue":3800.00,"driftAmount":-9199.80,"action":"SELL"},{"assetClass":"LIQUID","currentPct":0.0,"targetPct":5.0,"currentValue":0.00,"targetValue":1900.00,"driftAmount":1900.00,"action":"BUY"}],"subAssetRecommendations":["Tilt equity toward large-cap and flexi-cap funds","Add controlled mid-cap exposure for growth","Keep limited debt and liquid allocation for opportunistic rebalancing"],"efficientFrontier":[{"profileName":"CONSERVATIVE","expectedReturn":7.2,"volatility":5.5,"equityPct":20.0,"debtPct":55.0,"goldPct":15.0,"liquidPct":10.0,"currentProfile":false},{"profileName":"BALANCED","expectedReturn":8.8,"volatility":7.4,"equityPct":40.0,"debtPct":35.0,"goldPct":15.0,"liquidPct":10.0,"currentProfile":false},{"profileName":"MODERATE_GROWTH","expectedReturn":10.1,"volatility":9.1,"equityPct":55.0,"debtPct":25.0,"goldPct":10.0,"liquidPct":10.0,"currentProfile":false},{"profileName":"GROWTH","expectedReturn":11.4,"volatility":11.3,"equityPct":70.0,"debtPct":15.0,"goldPct":10.0,"liquidPct":5.0,"currentProfile":false},{"profileName":"AGGRESSIVE","expectedReturn":12.2,"volatility":13.0,"equityPct":80.0,"debtPct":10.0,"goldPct":5.0,"liquidPct":5.0,"currentProfile":true}],"taxReviewFlags":[]}}
+C:\Users\DELL>curl http://localhost:8081/portfolio ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Portfolio fetched successfully","data":{"portfolioId":1,"userId":1,"totalInvestedValue":33050.00,"totalCurrentValue":38000.00,"totalProfitLoss":4950.00,"totalReturnPercent":14.98,"equityPct":65.79,"debtPct":0.0,"goldPct":34.21,"liquidPct":0.0,"holdingsCount":2,"investments":[{"id":2,"assetName":"Gold ETF","assetType":"GOLD","buyPrice":55.00,"quantity":200.0,"investedValue":11000.00,"currentValue":13000.00,"profitLoss":2000.00,"returnPercent":18.18,"purchaseDate":"2025-03-01"},{"id":1,"assetName":"Nifty 50 ETF","assetType":"ETF","buyPrice":220.50,"quantity":100.0,"investedValue":22050.00,"currentValue":25000.00,"profitLoss":2950.00,"returnPercent":13.38,"purchaseDate":"2025-01-10"}]}}
+C:\Users\DELL>curl http://localhost:8081/portfolio/optimize ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Portfolio optimization fetched successfully","data":{"portfolioId":1,"riskCategory":"AGGRESSIVE","allocationProfile":"AGGRESSIVE","expectedAnnualReturn":12.0,"estimatedVolatility":12.5,"totalCurrentValue":38000.00,"allocationBuckets":[{"assetClass":"EQUITY","currentPct":65.79,"targetPct":75.0,"currentValue":25000.20,"targetValue":28500.00,"driftAmount":3499.80,"action":"BUY"},{"assetClass":"DEBT","currentPct":0.0,"targetPct":10.0,"currentValue":0.00,"targetValue":3800.00,"driftAmount":3800.00,"action":"BUY"},{"assetClass":"GOLD","currentPct":34.21,"targetPct":10.0,"currentValue":12999.80,"targetValue":3800.00,"driftAmount":-9199.80,"action":"SELL"},{"assetClass":"LIQUID","currentPct":0.0,"targetPct":5.0,"currentValue":0.00,"targetValue":1900.00,"driftAmount":1900.00,"action":"BUY"}],"subAssetRecommendations":["Tilt equity toward large-cap and flexi-cap funds","Add controlled mid-cap exposure for growth","Keep limited debt and liquid allocation for opportunistic rebalancing"],"efficientFrontier":[{"profileName":"CONSERVATIVE","expectedReturn":7.2,"volatility":5.5,"equityPct":20.0,"debtPct":55.0,"goldPct":15.0,"liquidPct":10.0,"currentProfile":false},{"profileName":"BALANCED","expectedReturn":8.8,"volatility":7.4,"equityPct":40.0,"debtPct":35.0,"goldPct":15.0,"liquidPct":10.0,"currentProfile":false},{"profileName":"MODERATE_GROWTH","expectedReturn":10.1,"volatility":9.1,"equityPct":55.0,"debtPct":25.0,"goldPct":10.0,"liquidPct":10.0,"currentProfile":false},{"profileName":"GROWTH","expectedReturn":11.4,"volatility":11.3,"equityPct":70.0,"debtPct":15.0,"goldPct":10.0,"liquidPct":5.0,"currentProfile":false},{"profileName":"AGGRESSIVE","expectedReturn":12.2,"volatility":13.0,"equityPct":80.0,"debtPct":10.0,"goldPct":5.0,"liquidPct":5.0,"currentProfile":true}],"taxReviewFlags":[]}}
+C:\Users\DELL>curl -X PUT http://localhost:8081/portfolio/investments/1 ^
+More?   -H "Content-Type: application/json" ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc" ^
+More? -d "{\"assetName\":\"Nifty 50 ETF\",\"assetType\":\"ETF\",\"buyPrice\":220.50,\"quantity\":120,\"currentValue\":30000,\"purchaseDate\":\"2025-01-10\"}"
+{"success":true,"message":"Investment updated successfully","data":{"portfolioId":1,"userId":1,"totalInvestedValue":37460.00,"totalCurrentValue":43000.00,"totalProfitLoss":5540.00,"totalReturnPercent":14.79,"equityPct":69.77,"debtPct":0.0,"goldPct":30.23,"liquidPct":0.0,"holdingsCount":2,"investments":[{"id":2,"assetName":"Gold ETF","assetType":"GOLD","buyPrice":55.00,"quantity":200.0,"investedValue":11000.00,"currentValue":13000.00,"profitLoss":2000.00,"returnPercent":18.18,"purchaseDate":"2025-03-01"},{"id":1,"assetName":"Nifty 50 ETF","assetType":"ETF","buyPrice":220.50,"quantity":120.0,"investedValue":26460.00,"currentValue":30000.00,"profitLoss":3540.00,"returnPercent":13.38,"purchaseDate":"2025-01-10"}]}}
+C:\Users\DELL>curl -X POST http://localhost:8081/simulation/presets/STRESS ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Preset simulation completed successfully","data":{"simulationId":1,"scenarioType":"STRESS","portfolioValueBefore":43000.00,"portfolioValueAfter":35039.58,"changePercent":-18.51,"recoveryMonths":1,"bestCaseValue":172688.62,"expectedValue":87193.77,"worstCaseValue":43900.81,"appliedShocks":{"gold":8.0,"equity":-30.0,"liquid":1.0,"debt":-5.0},"monteCarloData":"{\"appliedShocks\":{\"gold\":8.0,\"equity\":-30.0,\"liquid\":1.0,\"debt\":-5.0},\"worstCase\":43900.81,\"expectedCase\":87193.77,\"bestCase\":172688.62}","runAt":"2026-04-13T20:40:26.494052"}}
+C:\Users\DELL>curl -X POST http://localhost:8081/simulation/presets/BULLISH ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Preset simulation completed successfully","data":{"simulationId":2,"scenarioType":"BULLISH","portfolioValueBefore":43000.00,"portfolioValueAfter":49780.15,"changePercent":15.77,"recoveryMonths":0,"bestCaseValue":245335.86,"expectedValue":123874.74,"worstCaseValue":62369.16,"appliedShocks":{"gold":6.0,"equity":20.0,"liquid":2.0,"debt":4.0},"monteCarloData":"{\"appliedShocks\":{\"gold\":6.0,\"equity\":20.0,\"liquid\":2.0,\"debt\":4.0},\"worstCase\":62369.16,\"expectedCase\":123874.74,\"bestCase\":245335.86}","runAt":"2026-04-13T20:41:47.441881"}}
+C:\Users\DELL>curl -X POST http://localhost:8081/simulation/custom ^
+More?   -H "Content-Type: application/json" ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc" ^
+More? -d "{\"scenarioType\":\"STRESS\",\"equityShockPct\":-25,\"debtShockPct\":-3,\"goldShockPct\":6,\"liquidShockPct\":1,\"projectionYears\":10,\"iterations\":1000}"
+{"success":true,"message":"Custom simulation completed successfully","data":{"simulationId":3,"scenarioType":"STRESS","portfolioValueBefore":43000.00,"portfolioValueAfter":36279.66,"changePercent":-15.63,"recoveryMonths":1,"bestCaseValue":178800.22,"expectedValue":90279.63,"worstCaseValue":45454.50,"appliedShocks":{"gold":6.0,"equity":-25.0,"liquid":1.0,"debt":-3.0},"monteCarloData":"{\"appliedShocks\":{\"gold\":6.0,\"equity\":-25.0,\"liquid\":1.0,\"debt\":-3.0},\"worstCase\":45454.50,\"expectedCase\":90279.63,\"bestCase\":178800.22}","runAt":"2026-04-13T20:42:34.265936"}}
+C:\Users\DELL>curl http://localhost:8081/simulation/history ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Simulation history fetched successfully","data":[{"simulationId":3,"scenarioType":"STRESS","portfolioValueBefore":43000.00,"portfolioValueAfter":36279.66,"changePercent":-15.63,"recoveryMonths":null,"bestCaseValue":null,"expectedValue":null,"worstCaseValue":null,"appliedShocks":{},"monteCarloData":"{\"appliedShocks\":{\"gold\":6.0,\"equity\":-25.0,\"liquid\":1.0,\"debt\":-3.0},\"worstCase\":45454.50,\"expectedCase\":90279.63,\"bestCase\":178800.22}","runAt":"2026-04-13T20:42:34.265936"},{"simulationId":2,"scenarioType":"BULLISH","portfolioValueBefore":43000.00,"portfolioValueAfter":49780.15,"changePercent":15.77,"recoveryMonths":null,"bestCaseValue":null,"expectedValue":null,"worstCaseValue":null,"appliedShocks":{},"monteCarloData":"{\"appliedShocks\":{\"gold\":6.0,\"equity\":20.0,\"liquid\":2.0,\"debt\":4.0},\"worstCase\":62369.16,\"expectedCase\":123874.74,\"bestCase\":245335.86}","runAt":"2026-04-13T20:41:47.441881"},{"simulationId":1,"scenarioType":"STRESS","portfolioValueBefore":43000.00,"portfolioValueAfter":35039.58,"changePercent":-18.51,"recoveryMonths":null,"bestCaseValue":null,"expectedValue":null,"worstCaseValue":null,"appliedShocks":{},"monteCarloData":"{\"appliedShocks\":{\"gold\":8.0,\"equity\":-30.0,\"liquid\":1.0,\"debt\":-5.0},\"worstCase\":43900.81,\"expectedCase\":87193.77,\"bestCase\":172688.62}","runAt":"2026-04-13T20:40:26.494052"}]}
+C:\Users\DELL>curl -X POST http://localhost:8081/insights/generate ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Insights generated successfully","data":{"healthScore":{"score":44,"savingsScore":100.0,"goalScore":5.96,"diversificationScore":50.0,"emergencyFundScore":0.0},"alerts":[{"id":1,"severity":"MEDIUM","message":"You do not have an emergency fund goal.","actionSuggestion":"Create an emergency fund goal covering 3-6 months of expenses.","isRead":false,"snoozedUntil":null,"createdAt":"2026-04-13T20:43:44.964397"}]}}
+C:\Users\DELL>curl http://localhost:8081/insights/health-score ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Health score fetched successfully","data":{"score":44,"savingsScore":100.0,"goalScore":5.96,"diversificationScore":50.0,"emergencyFundScore":0.0}}
+C:\Users\DELL>curl http://localhost:8081/insights/alerts ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Alerts fetched successfully","data":[{"id":1,"severity":"MEDIUM","message":"You do not have an emergency fund goal.","actionSuggestion":"Create an emergency fund goal covering 3-6 months of expenses.","isRead":false,"snoozedUntil":null,"createdAt":"2026-04-13T20:43:44.964397"}]}
+C:\Users\DELL>curl -X PATCH http://localhost:8081/insights/alerts/1/dismiss ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+{"success":true,"message":"Alert dismissed successfully","data":{"id":1,"severity":"MEDIUM","message":"You do not have an emergency fund goal.","actionSuggestion":"Create an emergency fund goal covering 3-6 months of expenses.","isRead":true,"snoozedUntil":null,"createdAt":"2026-04-13T20:43:44.964397"}}
+C:\Users\DELL>curl http://localhost:8081/portfolio
+{"timestamp":"2026-04-13T15:16:14.965+00:00","status":403,"error":"Forbidden","message":"Forbidden","path":"/portfolio"}
+C:\Users\DELL>curl http://localhost:8081/admin/dashboard ^
+More?   -H "Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzc2MDczOTI1LCJleHAiOjE3NzYxNjAzMjV9.OHQi9d4D8jVnnfLiD0ud2g26ZDVNV3poOxWpT-Wx0aP70y_-tDI622srMOjr5CMc"
+curl: (7) Failed to connect to localhost port 8081 after 2236 ms: Could not connect to server
+
+C:\Users\DELL>

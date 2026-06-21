@@ -1,0 +1,5 @@
+as_of,asset_class,return_adjustment,volatility_adjustment,market_regime
+2026-04-20,EQUITY,0.6,1.2,risk_on
+2026-04-20,DEBT,0.2,-0.3,stable
+2026-04-20,GOLD,0.4,0.5,hedge_bid
+2026-04-20,LIQUID,0.1,0.0,stable

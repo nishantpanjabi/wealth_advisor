@@ -1,0 +1,1 @@
+import{a as t}from"./index-CEuxkk0Z.js";async function r(){return t({path:"/risk/latest"})}async function e(){return t({path:"/risk/history"})}async function i(a){return t({path:"/risk/calculate",method:"POST",body:a})}export{e as a,i as c,r as g};

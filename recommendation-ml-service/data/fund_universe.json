@@ -1,0 +1,74 @@
+[
+  {
+    "fund_name": "UTI Nifty 50 Index Fund",
+    "asset_class": "EQUITY",
+    "risk_category": "AGGRESSIVE",
+    "expected_return": 12.2,
+    "volatility": 16.5,
+    "goal_bias": 0.72,
+    "liquidity": 0.75
+  },
+  {
+    "fund_name": "Parag Parikh Flexi Cap Fund",
+    "asset_class": "EQUITY",
+    "risk_category": "MODERATE",
+    "expected_return": 11.4,
+    "volatility": 13.1,
+    "goal_bias": 0.84,
+    "liquidity": 0.7
+  },
+  {
+    "fund_name": "Mirae Asset Large & Midcap Fund",
+    "asset_class": "EQUITY",
+    "risk_category": "AGGRESSIVE",
+    "expected_return": 13.1,
+    "volatility": 18.4,
+    "goal_bias": 0.76,
+    "liquidity": 0.66
+  },
+  {
+    "fund_name": "ICICI Prudential Corporate Bond Fund",
+    "asset_class": "DEBT",
+    "risk_category": "CONSERVATIVE",
+    "expected_return": 7.4,
+    "volatility": 4.8,
+    "goal_bias": 0.58,
+    "liquidity": 0.88
+  },
+  {
+    "fund_name": "HDFC Short Term Debt Fund",
+    "asset_class": "DEBT",
+    "risk_category": "MODERATE",
+    "expected_return": 7.9,
+    "volatility": 5.4,
+    "goal_bias": 0.6,
+    "liquidity": 0.83
+  },
+  {
+    "fund_name": "HDFC Gold ETF",
+    "asset_class": "GOLD",
+    "risk_category": "MODERATE",
+    "expected_return": 8.3,
+    "volatility": 10.1,
+    "goal_bias": 0.49,
+    "liquidity": 0.8
+  },
+  {
+    "fund_name": "SBI Gold Fund",
+    "asset_class": "GOLD",
+    "risk_category": "CONSERVATIVE",
+    "expected_return": 8.0,
+    "volatility": 9.8,
+    "goal_bias": 0.46,
+    "liquidity": 0.78
+  },
+  {
+    "fund_name": "Liquid Treasury Fund",
+    "asset_class": "LIQUID",
+    "risk_category": "CONSERVATIVE",
+    "expected_return": 5.8,
+    "volatility": 1.2,
+    "goal_bias": 0.42,
+    "liquidity": 0.98
+  }
+]
