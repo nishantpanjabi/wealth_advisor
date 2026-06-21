@@ -1,1 +1,0 @@
-import{j as t}from"./index-CEuxkk0Z.js";function x({title:e,message:s}){return t.jsxs("div",{className:"glass rounded-2xl border border-white/70 p-5 text-center shadow-soft",children:[t.jsx("p",{className:"font-display text-2xl text-ink",children:e}),t.jsx("p",{className:"mt-1 text-sm text-ink/70",children:s})]})}export{x as E};

@@ -1,1 +1,0 @@
-import{a as t}from"./index-CEuxkk0Z.js";async function e(){return t({path:"/goals"})}async function n(a){return t({path:"/goals",method:"POST",body:a})}async function s(a){return t({path:`/goals/${a}`,method:"DELETE"})}export{n as c,s as d,e as g};
