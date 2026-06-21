@@ -20,7 +20,8 @@ Thumbs.db
 /release.properties
 
 # Node / frontend
-/node_modules/
+# Ignore node_modules in any subfolder
+node_modules/
 /dist/
 /build/
 /coverage/
